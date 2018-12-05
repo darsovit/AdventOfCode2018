@@ -14,19 +14,24 @@ def loadAndSortInput():
 
 def parseGuardDuties( logs ):
     guardEntry = None
+    guardId    = None
     entryDate  = None
     guardEntries = {}
     for log in logs:
         action = log.split()[2]
         if action == 'Guard':
             if guardEntry and entryDate:
-                guardEntries[entryDate] = guardEntry
-            (guardEntry, entryDate) = parseNewGuard( log )
+                if guardId not in guardEntries:
+                    guardEntries[guardId] = {}
+                guardEntries[guardId][entryDate] = guardEntry
+            (guardEntry, guardId, entryDate) = parseNewGuard( log )
+            if guardId not in guardEntries:
+                guardEntries[guardId] = {}
         elif action == 'falls':
-            if guardEntry and entryDate:
+            if guardEntry:
                 guardEntry = parseGuardAsleep( guardEntry, log )
         elif action == 'wakes':
-            if guardEntry and entryDate:
+            if guardEntry:
                 guardEntry = parseGuardAwake( guardEntry, log )
     return guardEntries
 
@@ -44,7 +49,7 @@ def parseNewGuard( log ):
     guardEntry['priorStateSwap'] = 0
     guardEntry['awake'] = []
     guardEntry['asleep'] = []
-    return (guardEntry, date)
+    return (guardEntry, guardEntry['ID'], date)
 
 def parseGuardAsleep( guardEntry, log ):
     ( date, time, restOfLog ) = parseDateAndTime( log )
@@ -81,18 +86,17 @@ def incrementDate( date ):
 
 def countGuardAndSleepTimes( guardDuties ):
     guardsAndSleepTimes = {}
-    for date in guardDuties:
-        guardDuty = guardDuties[date]
-        print( guardDuty )
+    for guardId in guardDuties:
         totalSleep = 0
-        for (asleep,awake) in guardDuty['asleep']:
-            totalSleep += ( awake - asleep )
-        if guardDuty['state'] == 'asleep':
-            print( "guard ended duty asleep" )
-            totalSleep += 60 - int(guardDuty['priorStateSwap'])
-        if guardDuty['ID'] not in guardsAndSleepTimes.keys():
-            guardsAndSleepTimes[guardDuty['ID']] = 0
-        guardsAndSleepTimes[guardDuty['ID']] += totalSleep
+        for date in guardDuties[guardId]:
+            guardDuty = guardDuties[guardId][date]
+            #print( guardDuty )
+            for (asleep,awake) in guardDuty['asleep']:
+                totalSleep += ( awake - asleep )
+            if guardDuty['state'] == 'asleep':
+                print( "guard ended duty asleep" )
+                totalSleep += 60 - int(guardDuty['priorStateSwap'])
+        guardsAndSleepTimes[guardId] = totalSleep
     return guardsAndSleepTimes
 
 def findLongestSleepingGuard( guardSleepTimes ):
@@ -102,10 +106,33 @@ def findLongestSleepingGuard( guardSleepTimes ):
         if guardSleepTimes[guard] > longestSleepTime:
             longestSleepTime = guardSleepTimes[guard]
             longestSleepGuardId = guard
-    return ( longestSleepGuardId, longestSleepTime )
+    return ( longestSleepGuardId )
+
+def findLongestMinuteForGuard( guardDuties ):
+    minuteCounts = {}
+    for date in guardDuties:
+        guardDuty = guardDuties[date]
+        for (asleep,awake) in guardDuty['asleep']:
+            for minute in range(asleep, awake):
+                if minute in minuteCounts:
+                    minuteCounts[minute] += 1
+                else:
+                    minuteCounts[minute] = 1
+    highestMinuteAsleep = None
+    highestMinuteCount  = None
+    for minute in minuteCounts:
+        if not highestMinuteCount:
+            highestMinuteAsleep = minute
+            highestMinuteCount = minuteCounts[minute]
+        elif highestMinuteCount < minuteCounts[minute]:
+            highestMinuteAsleep = minute
+            highestMinuteCount = minuteCounts[minute]
+    return highestMinuteAsleep
+        
 
 sortedInput = loadAndSortInput()
 guardDuties = parseGuardDuties( sortedInput )
 guardSleepTimes = countGuardAndSleepTimes( guardDuties )
 longestSleepGuard = findLongestSleepingGuard( guardSleepTimes )
-print( longestSleepGuard[0] * longestSleepGuard[1] )
+longestMinuteForGuard = findLongestMinuteForGuard( guardDuties[longestSleepGuard] )
+print( longestSleepGuard, longestMinuteForGuard, longestSleepGuard * longestMinuteForGuard )
