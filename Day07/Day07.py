@@ -19,6 +19,41 @@ def readInputGraph():
             if endNode not in graph['nodes']:
                 graph['nodes'].add(endNode)
     return graph
-    
-print( readInputGraph() )
-            
+
+def buildRunnableGraph( graph ):
+    graph['runnable'] = set()
+    for node in graph['nodes']:
+        graph['runnable'].add(node)
+    graph['dependencies'] = {}
+    graph['dependees']    = {}    
+    for edge in graph['edges']:
+        if edge[1] in graph['runnable']:
+            graph['runnable'].remove(edge[1])
+        if edge[1] not in graph['dependencies']:
+            graph['dependencies'][edge[1]] = set()
+        graph['dependencies'][edge[1]].add(edge[0])
+        if edge[0] not in graph['dependees']:
+            graph['dependees'][edge[0]] = set()
+        graph['dependees'][edge[0]].add(edge[1])
+    return graph
+
+def runGraph( graph ):
+    runOrder = []
+    while len( graph['runnable'] ) > 0:
+        runnableList = list(graph['runnable'])
+        runnableList.sort()
+        nodeToRun = runnableList[0]
+        runOrder += [nodeToRun]
+        graph['runnable'].remove(nodeToRun)
+
+        if nodeToRun in graph['dependees']:
+            for nodeMaybeCleared in graph['dependees'][nodeToRun]:
+                graph['dependencies'][nodeMaybeCleared].remove(nodeToRun)
+                if len(graph['dependencies'][nodeMaybeCleared]) == 0:
+                    graph['runnable'].add( nodeMaybeCleared )
+    return ''.join(runOrder)
+
+graph = readInputGraph()
+graph = buildRunnableGraph( graph )
+print( runGraph(graph) )
+      
