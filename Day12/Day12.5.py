@@ -78,35 +78,31 @@ def convertStateToMachineAndValue( state ):
 
 def runMachine( machine, valueAndFirstPotBit ):
     (value, firstPotBit) = valueAndFirstPotBit
-    newValue = None
+
     initialFilter = [ 0x1, 0x3, 0x7, 0xf ]
     initialLeftShifts = [ 4, 3, 2, 1 ]
-    newFirstPotBit = None
+    newFirstPotBit = firstPotBit - 2
+    newValue = 0
     bitCount = 0
-    for i in range(2):
-        bit = machine[( value & initialFilter[i] ) << initialLeftShifts[i]]
-        if not newValue:
-            if bit == 1:
-                newValue = bit
-                newFirstPotBit = firstPotBit - 2 + i
-                bitCount = 1
-        else:
-            newValue = bit << bitCount + newValue
-            bitCount += 1
-    if not newValue:
-        newValue = 0
-        newFirstPotBit = firstPotBit
-
-    for i in range(2,4):
-        bit = machine[( value & initialFilter[i] ) << initialLeftShifts[i]]
+    for i in range(4):
+        index = (value & initialFilter[i]) << initialLeftShifts[i]
+        bit = machine[index]
+        #print( bitCount, index, bit, firstPotBit - 2 + bitCount )
         newValue = (bit << bitCount) + newValue
         bitCount += 1
             
     while value > 0:
-        nextBit = machine[( value & 0x10 )]
+        index = (value & 0x1f)
+        bit = machine[index]
+        #print( bitCount, index, bit, firstPotBit - 2 + bitCount )
         newValue = (bit << bitCount) + newValue
         bitCount += 1
         value >>= 1
+    #print( 'newValue', newValue )
+    while ( (newValue & 0x1) == 0 ):
+        #print( 'reduction', newValue )
+        newFirstPotBit += 1
+        newValue >>= 1
         
     return ( newValue, newFirstPotBit )
 
@@ -124,12 +120,29 @@ def debugPrint( count, valueAndFirstPotBit ):
         
     print( count, printableVal, firstPotBit )
 
+def calculateFilledPotValue( repeatingValue, totalNumToComplete ):
+    (value,firstPotBit,iterationsComplete,incrementPerIteration) = repeatingValue
+    iterationsToGo = totalNumToComplete - (iterationsComplete+1)
+    firstPotBit += ( iterationsToGo * incrementPerIteration )
+    
+    potSum = 0
+    while ( value > 0 ):
+        lowestBit = (value&1)
+        potSum += ( lowestBit * firstPotBit )
+        firstPotBit += 1
+        value >>= 1
+    return potSum
+    
+( machine, value ) = convertStateToMachineAndValue( readInputFile() )
+numIterations = 50000000000
+repeatingValue = None
+for i in range(numIterations):
+    #debugPrint(i, value)
+    newValue = runMachine( machine, value )
+    if ( newValue[0] == value[0] ):
+        repeatingValue = ( newValue[0], newValue[1], i, newValue[1]-value[1] )
+        break
+    else:
+        value = newValue
 
-( machine, value ) = convertStateToMachineAndValue( getTestState() )
-
-for i in range(20):
-    debugPrint(i, value)
-    value = runMachine( machine, value )
-
-debugPrint(20, value)
-print( value )
+print( calculateFilledPotValue ( repeatingValue, numIterations ) )
