@@ -207,8 +207,11 @@ class bandits:
         unitOrder = list( self.state['unitPos'].keys() )
         unitOrder.sort()
         #print( unitOrder )
+        ensureSameUnit = {}
         for unitPos in unitOrder:
-            if unitPos in self.state['unitPos']:
+            ensureSameUnit[unitPos] = self.state['unitPos'][unitPos]
+        for unitPos in unitOrder:
+            if unitPos in self.state['unitPos'] and ensureSameUnit[unitPos] == self.state['unitPos'][unitPos]:
                 (race,squadNo) = self.state['unitPos'][unitPos]
                 if len( self.state['units'][self.state['units'][race][squadNo].getEnemyRace()] ) == 0:
                     return True
@@ -226,6 +229,8 @@ class bandits:
                         alive = self.state['units'][enemyRace][enemySquad].takeDamage( dmg )
                         if not alive:
                             self.removeUnit(enemyToAttack)
+            elif unitPos in self.state['unitPos'] and ensureSameUnit[unitPos] != self.state['unitPos'][unitPos]:
+                print( 'Unit in pos is now different from original:', unitPos, ensureSameUnit[unitPos], self.state['unitPos'][unitPos] )
             else:
                 #print( 'Failed to find ', unitPos, ' in unitPos dict():', self.state['unitPos'] )
                 continue
