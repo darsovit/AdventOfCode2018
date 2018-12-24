@@ -1,0 +1,60 @@
+Registers A (0), B (1), C (2), D (4), E (5), IP (3)
+#ip 3
+( 0) addi 3 16 3   # goto jump1  (Initialization below)
+
+jump8:
+( 1) seti 1 3 4    # D = 1
+
+                   # while ( D <= C ):    
+jump7:
+( 2) seti 1 8 5    #    E = 1
+
+jump5:
+                   #    while E <= C:
+                   #        if ( D * E == C ):
+                   #            A += D
+                   #        E += 1
+                   #    D += 1
+                   
+( 3) mulr 4 5 1    #    B = D * E
+( 4) eqrr 1 2 1    #    B = ( B == C );   if ( B == C )
+( 5) addr 1 3 3    #                       goto jump2
+( 6) addi 3 1 3    #                   else goto jump3
+jump2:
+( 7) addr 4 0 0    # A = D + A
+jump3:
+( 8) addi 5 1 5    # E = E + 1
+( 9) gtrr 5 2 1    # B = E > C
+(10) addr 3 1 3    # if B goto jump4
+(11) seti 2 6 3    #     else goto jump5
+jump4:
+(12) addi 4 1 4    # D = D + 1
+(13) gtrr 4 2 1    # B = D > C  if ( D > C )
+(14) addr 1 3 3    #                 goto jump6
+(15) seti 1 1 3    # IP = 1     else goto jump7
+jump6:
+(16) mulr 3 3 3    # goto end (goto 16*16)
+
+jump1:
+(17) addi 2 2 2    # C = C + 2;   C = 2
+(18) mulr 2 2 2    # C = C * C;   C = 4
+(19) mulr 3 2 2    # C = C * 19;  C = 76
+(20) muli 2 11 2   # C = C * 11;  C = 836
+(21) addi 1 5 1    # B = B + 5;   B = 5
+(22) mulr 1 3 1    # B = B * 22;  B = 110
+(23) addi 1 8 1    # B = B + 8;   B = 118
+(24) addr 2 1 2    # C = C + B;   C = 954
+(25) addr 3 0 3    # IP = 25 + A (goto somewhere, if A is not 0)
+(26) seti 0 5 3    # goto jump8
+(27) setr 3 9 1    # B = 3;       B = 27
+(28) mulr 1 3 1    # B = B * 28;  B = 756
+(29) addr 3 1 1    # B = 29 + B;  B = 785
+(30) mulr 3 1 1    # B = 30 * B;  B = 23550
+(31) muli 1 14 1   # B = 14 * B;  B = 329700
+(32) mulr 1 3 1    # B = 32 * B;  B = 10550400
+(33) addr 2 1 2    # C = C + B;   C = 10551354
+(34) seti 0 9 0    # A = 0;       A = 0
+(35) seti 0 9 3    # IP = 0, goto jump8
+
+
+end:

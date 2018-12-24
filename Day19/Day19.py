@@ -88,12 +88,16 @@ def determineIp( line ):
     return int(parts[1])
     
 def runStep( registers, instruction ):
-    return instruction[0]( registers, instruction[1], instruction[2], instruction[3] )
+    startRegisters = registers
+    resultRegisters = instruction[0]( registers, instruction[1], instruction[2], instruction[3] )
+    #print( startRegisters, '+', instruction, '=', resultRegisters )
+    #input('Press any key to continue')
+    return resultRegisters
 
 class timemachine:
-    def __init__(self, input):
+    def __init__(self, input, registers=(0,0,0,0,0,0) ):
         self.cpu = {}
-        self.cpu['registers'] = (0,0,0,0,0,0)
+        self.cpu['registers'] = registers
         self.cpu['ip'] = determineIp( input[0] )
         self.program = []
         for line in input[1:]:
@@ -119,7 +123,7 @@ class timemachine:
             self.cpu['registers'] = runStep( self.cpu['registers'], self.getInstruction() )
             self.incrementIp()
             
-tardis = timemachine( readInput() )
+tardis = timemachine( readInput(), registers=(1,0,0,0,0,0) )
 tardis.debugPrint()
 tardis.runProgram()
 tardis.debugPrint()
