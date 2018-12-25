@@ -1,0 +1,44 @@
+#ip 1, A(0), B(2), C(3), D(4), E(5)
+00 seti 123 0 4      # D = 123              ;   D = 0x7B           ; D = 0x7B                       ;
+jump2:               #jump2:                ;jump2:                ; do {                           ;
+01 bani 4 456 4      # D = D & 456          ;   D = D & 0x1C8      ;     D = D & 0x1C8              ;
+02 eqri 4 72 4       # D = 1 if D==72 else 0;   if ( D == 0x48 )   ;     if D == 0x48               ;
+03 addr 4 1 1        # IP = D + IP          ;       goto jump3     ;         break;                 ;
+04 seti 0 0 1        # IP = 0               ;   else goto jump2    ; } while (true)                 ;
+jump3:               #jump3:                ;jump3:                ;                                ;
+05 seti 0 2 4        # D = 0                ;   D = 0              ; D = 0                          ; D = 0
+jump12:              #jump12:               ;jump12:               ; do {                           ; do {
+06 bori 4 65536 3    # C = D | 0x10000      ;   C = D | 0x10000    ;     C = D | 0x10000            ;     C = D | 0x10000
+07 seti 10552971 1 4 # D = 10552971         ;   D = 10,552,971     ;     D = 10,552,971             ;     D = 10,552,971
+jump11:              #jump11                ;jump11:               ;     while (true) {             ;     while ( true ) {
+08 bani 3 255 5      # E = C & 0xFF         ;   E = C & 0xFF       ;          E = C & 0xFF          ;         E = C & 0xFF
+09 addr 4 5 4        # D = D + E            ;   D = D + E          ;          D = D + E             ;         D = D + E
+10 bani 4 16777215 4 # D = D & 0xFFFFFF     ;   D = D & 0xFFFFFF   ;          D = D & 0xFFFFFF      ;         D = D & 0xFFFFFF
+11 muli 4 65899 4    # D = D * 65899        ;   D = D * 65899      ;          D = D * 65899         ;         D = D * 65899
+12 bani 4 16777215 4 # D = D & 0xFFFFFF     ;   D = D & 0xFFFFFF   ;          D = D & 0xFFFFFF      ;         D = D & 0xFFFFFF
+13 gtir 256 3 5      # E = 256 > C          ;   if ( 256 > C )     ;          if ( 256 > C ) {      ;         if ( 256 > C )
+14 addr 5 1 1        # IP = IP + E          ;       goto jump4     ;              break;            ;             break;
+15 addi 1 1 1        # IP = IP + 1          ;   else goto jump5    ;                                ;         
+jump4:               #jump4:                ;jump4:                ;                                ;
+16 seti 27 7 1       # IP = 27              ;   goto jump6         ;                                ;
+jump5:               #jump5:                ;jump5:                ;                                ;
+17 seti 0 1 5        # E = 0                ;   E = 0              ;          E = 0                 ;         E = 0
+jump10:              #jump10:               ;jump10:               ;          do {                  ;         for ( ; (E+1)*256 <= C; ++E )
+18 addi 5 1 2        # B = E + 1            ;   B = E + 1          ;              B = E + 1         ;             
+19 muli 2 256 2      # B = B * 256          ;   B = B * 256        ;              B = B * 256       ;             
+20 gtrr 2 3 2        # B = 1 if B > C else 0;   if ( B > C )       ;              if B <= C         ;             
+21 addr 2 1 1        # IP = B + IP          ;       goto jump7     ;                                ;
+22 addi 1 1 1        # IP = IP + 1          ;   else goto jump8    ;                                ;
+jump7:               #jump7:                ;jump7:                ;                                ;
+23 seti 25 0 1       # IP = 25              ;   goto jump9         ;                                ;
+jump8:               #jump8:                ;jump8                 ;                                ;
+24 addi 5 1 5        # E = E+1              ;   E = E+1            ;                   E = E+1      ;                 
+25 seti 17 2 1       # IP = 17              ;   goto jump10        ;          } while ( B <= C )    ;         
+jump9:               #jump9:                ;jump9:                ;                                ;
+26 setr 5 7 3        # C = E                ;   C = E              ;          C = E                 ;         C = E
+27 seti 7 8 1        # IP = 7               ;   goto jump11        ;     } while ( 256 <= C )       ;     }
+jump6:               #jump6:                ;jump6                 ;                                ;
+28 eqrr 4 0 5        # E = 1 if D==A else 0 ;   if D==A            ; } while ( D != A )             ; } while ( D != A )
+29 addr 5 1 1        # IP = E + IP          ;        goto end
+30 seti 5 0 1        # IP = 5               ;   goto jump12
+end:
