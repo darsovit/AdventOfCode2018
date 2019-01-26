@@ -68,69 +68,130 @@ def buildField( lines ):
                     field['rightest'] = x
                 elif x < field['leftest']:
                     field['leftest'] = x
+    # 499 500 501
+    field['source'] = (500-field['leftest']+1, 0)
+    width = field['rightest'] - field['leftest'] + 3
+    field['raster'] = []
+    #### DEBUG, limit to 100 depth
+    field['deepest'] = 100
+    for y in range( 0, field['deepest']+1 ):
+        field['raster'].append('')
+        #field['raster'][y] = bytearray(width+1)
+        for x in range( 0, width + 1 ):
+            if (x+field['leftest']-1, y) in field['clay']:
+                field['raster'][y] += '#'
+            else:
+                field['raster'][y] += '.'
     return field
+
+def getFieldElement(field, pos):
+    (x,y) = pos
+    return field['raster'][y][x-field['leftest']+1]
+
+def isClay(field, pos):
+    return '#' == getFieldElement(field, pos)
+    
+def isStillWater(field, pos):
+    return '~' == getFieldElement(field, pos)
+
+def isFlowingWater(field, pos):
+    return '|' == getFieldElement(field, pos)
+
+def isWater( field, pos ):
+    element = getFieldElement(field,pos)
+    return '~' == element or '|' == element
 
 def wallToLeft( field, pos ):
     (x,y) = pos
-    return (x-1,y) in field['clay']
-
+    return isClay( field, (x-1, y) )
+    
 def wallToRight( field, pos ):
     (x, y) = pos
-    return (x+1,y) in field['clay']
+    return isClay( field, (x+1, y) )
 
 def solidUnderLeft( field, pos ):
     (x, y) = pos
     testPos = (x-1,y+1)
-    return testPos in field['clay'] or testPos in field['water'] and '~' == field['water'][testPos]
+    element = getFieldElement( field, testPos )
+    return '#' == element or '~' == element
 
 def solidUnderRight( field, pos ):
     (x, y) = pos
     testPos = (x+1, y+1)
-    return testPos in field['clay'] or testPos in field['water'] and '~' == field['water'][testPos]
-    
+    element = getFieldElement( field, testPos )
+    return '#' == element or '~' == element
+
+def fillFlowingWater( field, pos ):
+    (x, y) = pos
+    line = field['raster'][y]
+    posToReplace = x - field['leftest'] + 1
+    field['raster'][y] = line[:posToReplace] + '|' + line[posToReplace+1:]
+
+def debugPrint( field ):
+    print('min:', field['minY'], 'deepest:', field['deepest'], 'left:', field['leftest'], 'right:', field['rightest'] )
+    for y in range(0,len( field['raster'] ) ):
+        for x in range( 0, len(field['raster'][y]) ):
+            print(field['raster'][y][x], end='')
+        print()
+def flowingWaterFromLeftToRight( field, left, right ):
+    (leftX,leftY) = left
+    (rightX,rightY) = right
+    assert leftY == rightY
+    y = leftY
+    offset = -field['leftest'] + 1
+    assert leftX < rightX
+    rc = True
+    for x in range(leftX,rightX+1):
+        assert isFlowingWater( field, (x,y) )
+    return rc
+
 def testInBasin( field, pos ):
     (x,y) = pos
     # test left
     leftX = x
+    rightX = x
     while not wallToLeft( field, (leftX,y) ) and solidUnderLeft( field, (leftX, y) ):
         leftX -= 1
-        field['water'][(leftX,y)] = '|'
-    rightX = x
+        fillFlowingWater( field, (leftX,y) )
     while not wallToRight( field, (rightX,y) ) and solidUnderRight( field, (rightX, y) ):
         rightX += 1
-        field['water'][(rightX,y)] = '|'
+        fillFlowingWater( field, (rightX,y) )
     if wallToLeft( field, (leftX,y) ) and wallToRight( field, (rightX, y) ):
         return ( True, (leftX,y), (rightX,y) )
     if wallToLeft( field, (leftX,y) ):
-        field['water'][(rightX+1,y)] = '|'
+        fillFlowingWater( field, (rightX+1, y) )
         return ( False, None, (rightX+1,y) )
     elif wallToRight( field, (rightX,y) ):
-        field['water'][(leftX-1,y)] = '|'
+        fillFlowingWater( field, (leftX-1, y) )
         return ( False, (leftX-1,y), None )
     else:
-        field['water'][(leftX-1,y)] = '|'
-        field['water'][(rightX+1,y)] = '|'
+        fillFlowingWater( field, (leftX-1, y) )
+        fillFlowingWater( field, (rightX+1, y) )
+        assert flowingWaterFromLeftToRight( field, (leftX-1,y), (rightX+1,y))
         return ( False, (leftX-1,y), (rightX+1, y) )
 
 def fillBasin( field, left, right ):
     (leftX,y) = left
     (rightX,y) = right
-    for i in range(leftX,rightX+1):
-        field['water'][(i,y)] = '~'
+    line =  field['raster'][y]
+    offset = -field['leftest']+1
+    countOfWater = rightX - leftX + 1
+    field['raster'][y] = line[:leftX+offset] + '~'*countOfWater + line[rightX+offset+1:]
     
 def fillWater( field ):
     waterPos = (500,0)
     field['downstream'] = deque()
     field['downstream'].appendleft(waterPos)
-    field['water'] = {}
-    field['water'][waterPos] = '|'
+    fillFlowingWater( field, waterPos )
+    debugPrint( field )
     while len(field['downstream']) > 0:
-        (x,y) = field['downstream'].popleft()
-        while (x,y+1) not in field['clay'] and (x,y+1) not in field['water'] and y+1 <= field['deepest']:
+        (x,y) = field['downstream'].pop()
+        
+        while y+1 <= field['deepest'] and not isClay( field, (x,y+1) ) and not isWater(field, (x,y+1) ):
             y += 1
-            field['water'][(x,y)] = '|'
+            fillFlowingWater( field, (x,y) )
 
-        if not y == field['deepest']:
+        if not y == field['deepest'] and not isFlowingWater( field, (x,y+1) ):
             # We've hit clay or our water stream cannot flow down any longer
             (inBasin, left, right) = testInBasin( field, (x,y) )
             if inBasin:
@@ -141,26 +202,24 @@ def fillWater( field ):
                     field['downstream'].appendleft( left )
                 if right:
                     field['downstream'].appendleft( right )
+        debugPrint( field )
+        print( field['downstream'] )
+        input("Press enter to continue...")
 
-def debugPrint( field ):
-    for y in range(0,field['deepest']+1):
-        for x in range(field['leftest']-2,field['rightest']+3):
-            if (x,y) in field['clay']:
-                print('#',end='')
-            elif (x,y) in field['water']:
-                print(field['water'][(x,y)], end='')
-            else:
-                print('.', end='')
-        print()
+
 def countWaterTiles( field ):
     count = 0
-    for waterTile in field['water']:
-        (x,y) = waterTile
-        if y >= field['minY'] and y <= field['deepest']:
-            count += 1
+    for y in range(field['minY'], field['deepest']+1):
+        for x in range(0, len(field['raster'][y])):
+            if field['raster'][y][x] == '~':
+                count += 1
+            elif field['raster'][y][x] == '|':
+                count += 1
     return count
-        
+    
+
 field = buildField( readInput() )
+debugPrint( field )
 fillWater( field )
 debugPrint( field )
 print( countWaterTiles( field ) )
