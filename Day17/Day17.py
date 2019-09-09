@@ -5,6 +5,8 @@ https://adventofcode.com/2018/day/17
 '''
 from collections import deque
 
+do_debug_print = None
+
 def sampleInput():
     return [
         "x=495, y=2..7",
@@ -73,7 +75,7 @@ def buildField( lines ):
     width = field['rightest'] - field['leftest'] + 3
     field['raster'] = []
     #### DEBUG, limit to 100 depth
-    field['deepest'] = 100
+    #field['deepest'] = min(100,field['deepest'])
     for y in range( 0, field['deepest']+1 ):
         field['raster'].append('')
         #field['raster'][y] = bytearray(width+1)
@@ -127,12 +129,17 @@ def fillFlowingWater( field, pos ):
     posToReplace = x - field['leftest'] + 1
     field['raster'][y] = line[:posToReplace] + '|' + line[posToReplace+1:]
 
-def debugPrint( field ):
+def debugPrint( field, force_print=False ):
+    if not do_debug_print and not force_print:
+        return
     print('min:', field['minY'], 'deepest:', field['deepest'], 'left:', field['leftest'], 'right:', field['rightest'] )
     for y in range(0,len( field['raster'] ) ):
         for x in range( 0, len(field['raster'][y]) ):
             print(field['raster'][y][x], end='')
         print()
+    print( field['downstream'] )
+    input("Press enter to continue...")
+
 def flowingWaterFromLeftToRight( field, left, right ):
     (leftX,leftY) = left
     (rightX,rightY) = right
@@ -142,20 +149,31 @@ def flowingWaterFromLeftToRight( field, left, right ):
     assert leftX < rightX
     rc = True
     for x in range(leftX,rightX+1):
+        if not isFlowingWater( field, (x,y) ):
+            debugPrint(field, True)
         assert isFlowingWater( field, (x,y) )
     return rc
+
+def findLeftEdge( field, x, y ):
+    leftX = x
+    while not wallToLeft( field, (leftX,y) ) and solidUnderLeft( field, (leftX, y) ):
+        leftX -= 1
+    return leftX
+
+def findRightEdge( field, x, y ):
+    rightX = x
+    while not wallToRight( field, (rightX,y) ) and solidUnderRight( field, (rightX, y) ):
+        rightX += 1
+    return rightX
 
 def testInBasin( field, pos ):
     (x,y) = pos
     # test left
-    leftX = x
-    rightX = x
-    while not wallToLeft( field, (leftX,y) ) and solidUnderLeft( field, (leftX, y) ):
-        leftX -= 1
-        fillFlowingWater( field, (leftX,y) )
-    while not wallToRight( field, (rightX,y) ) and solidUnderRight( field, (rightX, y) ):
-        rightX += 1
-        fillFlowingWater( field, (rightX,y) )
+    leftX = findLeftEdge( field, x, y )
+    rightX = findRightEdge( field, x, y )
+
+    for tmpX in range(leftX,rightX+1):
+        fillFlowingWater( field, (tmpX,y) )
     if wallToLeft( field, (leftX,y) ) and wallToRight( field, (rightX, y) ):
         return ( True, (leftX,y), (rightX,y) )
     if wallToLeft( field, (leftX,y) ):
@@ -203,19 +221,18 @@ def fillWater( field ):
                 if right:
                     field['downstream'].appendleft( right )
         debugPrint( field )
-        print( field['downstream'] )
-        input("Press enter to continue...")
 
 
 def countWaterTiles( field ):
-    count = 0
+    retainedWater = 0
+    flowingWater = 0
     for y in range(field['minY'], field['deepest']+1):
         for x in range(0, len(field['raster'][y])):
             if field['raster'][y][x] == '~':
-                count += 1
+                retainedWater += 1
             elif field['raster'][y][x] == '|':
-                count += 1
-    return count
+                flowingWater += 1
+    return (retainedWater, flowingWater, retainedWater+flowingWater)
     
 
 field = buildField( readInput() )
@@ -223,3 +240,4 @@ debugPrint( field )
 fillWater( field )
 debugPrint( field )
 print( countWaterTiles( field ) )
+
